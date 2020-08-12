@@ -15,6 +15,7 @@
 package xsrf_test
 
 import (
+	"net/http/httptest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-safeweb/safehttp"
 	"github.com/google/go-safeweb/safehttp/plugins/xsrf"
@@ -25,16 +26,14 @@ import (
 
 type testUserIDStorage struct{}
 
-func (testUserIDStorage) GetUserID() (string, error) {
-	return "potato", nil
+func (testUserIDStorage) GetUserID(r *safehttp.IncomingRequest) (string, error) {
+	return "1234" + r.Path() + r.Host(), nil
 }
 
 func TestXSRFTokenPost(t *testing.T) {
 	tests := []struct {
 		name       string
-		target     string
-		host       string
-		path       string
+		generationReq *safehttp.IncomingRequest
 		wantStatus int
 		wantHeader map[string][]string
 		wantBody   string
@@ -44,6 +43,7 @@ func TestXSRFTokenPost(t *testing.T) {
 			target:     "http://foo.com/pizza",
 			host:       "foo.com",
 			path:       "/pizza",
+			generationReq: safehttp.NewIncomingRequest(httptest.NewRequest("POST", "http://foo.com/pizza",))
 			wantStatus: 200,
 			wantHeader: map[string][]string{},
 			wantBody:   "",
@@ -72,8 +72,9 @@ func TestXSRFTokenPost(t *testing.T) {
 			},
 			wantBody: "Forbidden\n",
 		},
-		//TODO(@mihalimara22): Add tests for invalid user ID once
-		//UserIDStorage.GetUserID receives a parameter
+		{
+			name: "Invalid userID in token generation"
+		}
 	}
 	for _, test := range tests {
 		p := xsrf.NewPlugin("1234", testUserIDStorage{})
@@ -81,7 +82,7 @@ func TestXSRFTokenPost(t *testing.T) {
 		if err != nil {
 			t.Fatalf("p.GenerateToken: got %v, want nil", err)
 		}
-		req := safehttptest.NewRequest("POST", test.target, strings.NewReader(xsrf.TokenKey+"="+tok))
+		req := safehttptest.NewRequest("POST", "http://foo.com/pizza", strings.NewReader(xsrf.TokenKey+"="+tok))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rec := safehttptest.NewResponseRecorder()
 		p.Before(rec.ResponseWriter, req)
