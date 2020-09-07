@@ -84,8 +84,13 @@ type ServeMux struct {
 	intercepsOrder []string
 }
 
-// NewServeMux allocates and returns a new ServeMux
+// NewServeMux allocates and returns a new ServeMux. Passing a nil Dispatcher
+// will cause the method to panic.
 func NewServeMux(d Dispatcher, domains ...string) *ServeMux {
+	if d == nil {
+		panic("dispatcher cannot be nil")
+	}
+
 	// TODO(@mattiasgrenfeldt, @mihalimara22): make domains a variadic of string **literals**.
 	dm := map[string]bool{}
 	for _, host := range domains {

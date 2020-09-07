@@ -19,6 +19,11 @@ import "io"
 // Response TODO
 type Response interface{}
 
+// JSONResponse TODO
+type JSONResponse struct {
+	Data interface{}
+}
+
 // Template TODO
 type Template interface {
 	Execute(wr io.Writer, data interface{}) error
